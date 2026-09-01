@@ -252,7 +252,7 @@ const buildDynamicTerms = ({ membership, payment }) => {
 
   return [
     `1. This membership is valid for next ${durationLabel}.`,
-    `2. This membership will start from next financial year.`,
+    `2. This membership will start from the next financial year 01 April 2027.`,
     `3. Each financial year member will get one vacation (accommodation only), next ${durationLabel}.`,
     `4. Member is entitled for ${entitlementText}.`,
     "5. Member have to send the request for booking Minimum 15 days before of Vacation.",
