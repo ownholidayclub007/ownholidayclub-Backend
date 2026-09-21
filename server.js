@@ -41,6 +41,7 @@ const whyChooseUsRoutes        = require("./routes/whyChooseUs");
 const appGalleryRoutes         = require("./routes/appGalleryRoutes");
 const appVideoGalleryRoutes    = require("./routes/appVideoGalleryRoutes");
 const budgetRoutes             = require("./routes/budgetRoutes");
+const referralCodeRoutes       = require("./routes/referralCodes");
 
 // ─── Port ──────────────────────────────────────────────────────────────────────
 const port = process.env.PORT || 8081;
@@ -105,7 +106,8 @@ app.use("/api/why-choose-us",           whyChooseUsRoutes);
 app.use("/api/app-gallery",             appGalleryRoutes);
 app.use("/api/app-video-gallery",       appVideoGalleryRoutes);
 app.use("/api/budgets",                 budgetRoutes);
-
+app.use("/api/referral-codes",          referralCodeRoutes);
+  
 
 // ─── Test Routes (remove in production) ───────────────────────────────────────
 app.get("/hello", async (req, res) => {
@@ -146,7 +148,7 @@ app.get("/get/:id", async (req, res) => {
     res.status(500).send(error);
   }
 });
-
+ 
 app.put("/update/:id", async (req, res) => {
   try {
     const updatedData = await dummy.findByIdAndUpdate(

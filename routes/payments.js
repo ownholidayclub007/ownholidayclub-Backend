@@ -6,6 +6,7 @@ const CmsEntry = require("../models/CmsEntry");
 const EmailVerification = require("../models/EmailVerification");
 const MemberSequence = require("../models/MemberSequence");
 const MobileVerification = require("../models/MobileVerification");
+const ReferralCode = require("../models/ReferralCode");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const {
@@ -518,6 +519,7 @@ router.post(
     const orderId = String(req.body.razorpay_order_id || "").trim();
     const paymentId = String(req.body.razorpay_payment_id || "").trim();
     const signature = String(req.body.razorpay_signature || "").trim();
+    const referralCodeValue = String(req.body.referralCode || "").trim().toUpperCase();
     const { firstName, fullName, email, mobile, dob, gender, maritalStatus, occupation, anniversary, residenceAddress, correspondenceAddress, officeAddress } =
       memberDetails.personalDetails;
 
@@ -575,6 +577,16 @@ router.post(
     const adminFeeAmount = parseTierPriceToPaise(tier.adminFee);
     const totalAmount = membershipFeeAmount + adminFeeAmount;
     const membershipDetails = buildMembershipFromTier(tier);
+
+    let referralCodeRecord = null;
+    if (referralCodeValue) {
+      referralCodeRecord = await ReferralCode.findOne({ code: referralCodeValue });
+      if (!referralCodeRecord) {
+        return res.status(400).json({
+          message: "Referral code is invalid or not active.",
+        });
+      }
+    }
 
     let user = await findExistingUserForPurchase({ email, mobile });
 
@@ -708,6 +720,15 @@ router.post(
     user.membership = membershipDetails;
 
     await user.save();
+
+    if (referralCodeRecord) {
+      referralCodeRecord.installationCount = (referralCodeRecord.installationCount || 0) + 1;
+      referralCodeRecord.membershipCount = referralCodeRecord.installationCount;
+      referralCodeRecord.lastInstalledAt = new Date();
+      referralCodeRecord.lastUsedAt = referralCodeRecord.lastInstalledAt;
+      await referralCodeRecord.save();
+    }
+
     await EmailVerification.deleteOne({ email });
     await MobileVerification.deleteOne({ mobile });
     let emailDeliveryMessage = "";
