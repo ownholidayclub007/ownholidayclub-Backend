@@ -41,6 +41,7 @@ const whyChooseUsRoutes        = require("./routes/whyChooseUs");
 const appGalleryRoutes         = require("./routes/appGalleryRoutes");
 const appVideoGalleryRoutes    = require("./routes/appVideoGalleryRoutes");
 const budgetRoutes             = require("./routes/budgetRoutes");
+const testimonialRoutes        = require("./routes/testimonials");
 const referralCodeRoutes       = require("./routes/referralCodes");
 
 // ─── Port ──────────────────────────────────────────────────────────────────────
@@ -107,7 +108,7 @@ app.use("/api/app-gallery",             appGalleryRoutes);
 app.use("/api/app-video-gallery",       appVideoGalleryRoutes);
 app.use("/api/budgets",                 budgetRoutes);
 app.use("/api/referral-codes",          referralCodeRoutes);
-  
+app.use("/api/testimonials",             testimonialRoutes);
 
 // ─── Test Routes (remove in production) ───────────────────────────────────────
 app.get("/hello", async (req, res) => {

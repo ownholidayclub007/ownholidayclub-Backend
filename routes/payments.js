@@ -580,10 +580,14 @@ router.post(
 
     let referralCodeRecord = null;
     if (referralCodeValue) {
-      referralCodeRecord = await ReferralCode.findOne({ code: referralCodeValue });
+      referralCodeRecord = await ReferralCode.findOne({
+        code: referralCodeValue,
+        isActive: true,
+      });
+
       if (!referralCodeRecord) {
         return res.status(400).json({
-          message: "Referral code is invalid or not active.",
+          message: "Invalid referral code.",
         });
       }
     }
@@ -722,10 +726,9 @@ router.post(
     await user.save();
 
     if (referralCodeRecord) {
-      referralCodeRecord.installationCount = (referralCodeRecord.installationCount || 0) + 1;
-      referralCodeRecord.membershipCount = referralCodeRecord.installationCount;
-      referralCodeRecord.lastInstalledAt = new Date();
-      referralCodeRecord.lastUsedAt = referralCodeRecord.lastInstalledAt;
+      referralCodeRecord.membershipCount =
+        (referralCodeRecord.membershipCount || 0) + 1;
+      referralCodeRecord.lastUsedAt = new Date();
       await referralCodeRecord.save();
     }
 

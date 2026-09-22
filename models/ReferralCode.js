@@ -10,11 +10,6 @@ const referralCodeSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
-    installationCount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
     membershipCount: {
       type: Number,
       default: 0,
@@ -28,10 +23,6 @@ const referralCodeSchema = new mongoose.Schema(
       type: String,
       default: "Admin",
     },
-    lastInstalledAt: {
-      type: Date,
-      default: null,
-    },
     lastUsedAt: {
       type: Date,
       default: null,
@@ -41,7 +32,7 @@ const referralCodeSchema = new mongoose.Schema(
       default: "",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("ReferralCode", referralCodeSchema);

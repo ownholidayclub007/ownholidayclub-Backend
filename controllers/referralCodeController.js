@@ -1,22 +1,15 @@
 const crypto = require("crypto");
 const ReferralCode = require("../models/ReferralCode");
 
-const generateCodeValue = () => {
-  const randomPart = crypto.randomBytes(4).toString("hex").toUpperCase();
-  return `OHC-${randomPart}`;
-};
+const generateCodeValue = () =>
+  `OHC-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
 
 const generateUniqueReferralCode = async () => {
-  let code = generateCodeValue();
-  let attempts = 0;
-
-  while (attempts < 10) {
-    const existing = await ReferralCode.findOne({ code });
-    if (!existing) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const code = generateCodeValue();
+    if (!(await ReferralCode.exists({ code }))) {
       return code;
     }
-    code = generateCodeValue();
-    attempts += 1;
   }
 
   throw new Error("Unable to generate a unique referral code. Please retry.");
@@ -24,82 +17,69 @@ const generateUniqueReferralCode = async () => {
 
 exports.getReferralCodes = async (req, res) => {
   try {
-    const rawPage = Number(req.query.page || 1);
-    const rawLimit = Number(req.query.limit || 10);
-    const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 50) : 10;
+    const requestedPage = Number(req.query.page || 1);
+    const requestedLimit = Number(req.query.limit || 10);
+    const page = Number.isFinite(requestedPage) && requestedPage > 0
+      ? Math.floor(requestedPage)
+      : 1;
+    const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
+      ? Math.min(Math.floor(requestedLimit), 50)
+      : 10;
     const skip = (page - 1) * limit;
 
-    const [referralCodes, totalItems] = await Promise.all([
+    const [data, totalItems] = await Promise.all([
       ReferralCode.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       ReferralCode.countDocuments(),
     ]);
 
-    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      data: referralCodes,
+      data,
       currentPage: page,
-      totalPages,
+      totalPages: Math.max(1, Math.ceil(totalItems / limit)),
       totalItems,
       pageSize: limit,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.generateReferralCodes = async (req, res) => {
   try {
     const requestedCount = Number(req.body?.count ?? 10);
-    const count = Number.isFinite(requestedCount) && requestedCount > 0 ? Math.floor(requestedCount) : 10;
-
+    const count = Number.isFinite(requestedCount) && requestedCount > 0
+      ? Math.floor(requestedCount)
+      : 10;
     const codesToCreate = [];
 
-    for (let i = 0; i < count; i += 1) {
-      const code = await generateUniqueReferralCode();
-
+    for (let index = 0; index < count; index += 1) {
       codesToCreate.push({
-        code,
-        installationCount: 0,
-        membershipCount: 0,
+        code: await generateUniqueReferralCode(),
         createdBy: req.cmsAdmin?.username || "Admin",
         notes: "Generated from admin panel for membership referral tracking.",
       });
     }
 
-    const createdCodes = await ReferralCode.insertMany(codesToCreate);
-
-    res.status(200).json({
-      success: true,
-      count: createdCodes.length,
-      data: createdCodes,
-    });
+    const data = await ReferralCode.insertMany(codesToCreate);
+    return res.status(200).json({ success: true, count: data.length, data });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
 exports.validateReferralCode = async (req, res) => {
   try {
-    const codeValue = String(req.body?.code || "").trim().toUpperCase();
+    const code = String(req.body?.code || "").trim().toUpperCase();
 
-    if (!codeValue) {
-      return res.status(200).json({
-        success: true,
-        valid: true,
-        message: "No referral code entered.",
-      });
+    if (!code) {
+      return res.status(200).json({ success: true, valid: true });
     }
 
-    const referralCode = await ReferralCode.findOne({ code: codeValue, isActive: true });
+    const referralCode = await ReferralCode.findOne({
+      code,
+      isActive: true,
+    }).lean();
 
     if (!referralCode) {
       return res.status(400).json({
@@ -112,7 +92,6 @@ exports.validateReferralCode = async (req, res) => {
     return res.status(200).json({
       success: true,
       valid: true,
-      message: "Referral code is valid.",
       data: referralCode,
     });
   } catch (error) {
@@ -124,65 +103,23 @@ exports.validateReferralCode = async (req, res) => {
   }
 };
 
-exports.trackReferralInstall = async (req, res) => {
-  try {
-    const codeValue = String(req.body?.code || "").trim().toUpperCase();
-
-    if (!codeValue) {
-      return res.status(400).json({
-        success: false,
-        message: "Referral code is required.",
-      });
-    }
-
-    const referralCode = await ReferralCode.findOne({ code: codeValue });
-
-    if (!referralCode) {
-      return res.status(404).json({
-        success: false,
-        message: "Referral code not found.",
-      });
-    }
-
-    referralCode.installationCount = (referralCode.installationCount || 0) + 1;
-    referralCode.membershipCount = referralCode.installationCount;
-    referralCode.lastInstalledAt = new Date();
-    referralCode.lastUsedAt = referralCode.lastInstalledAt;
-    await referralCode.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Membership referral usage tracked successfully.",
-      data: referralCode,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
 exports.deleteReferralCode = async (req, res) => {
   try {
-    const referralCode = await ReferralCode.findByIdAndDelete(req.params.id);
+    const deleted = await ReferralCode.findByIdAndDelete(req.params.id);
 
-    if (!referralCode) {
+    if (!deleted) {
       return res.status(404).json({
         success: false,
         message: "Referral code not found.",
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Referral code deleted successfully.",
-      data: referralCode,
+      data: deleted,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
