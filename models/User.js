@@ -317,6 +317,12 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       index: true,
     },
+    referralCode: {
+      type: String,
+      default: "",
+      trim: true,
+      uppercase: true,
+    },
     name: {
       type: String,
       default: "",

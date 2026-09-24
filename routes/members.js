@@ -14,11 +14,36 @@ router.get(
   "/",
   requireCmsAdmin,
   asyncHandler(async (req, res) => {
-    const members = await User.find().sort({ createdAt: -1 });
+    const members = await User.find({
+      $or: [
+        { membershipId: { $exists: true, $nin: [null, ""] } },
+        { "payments.status": "captured" },
+      ],
+    }).sort({ createdAt: -1 });
 
     res.status(200).json({
       message: "Members fetched successfully.",
       members,
+    });
+  })
+);
+
+// GET MEMBERSHIP APPLICATIONS SAVED WITHOUT COMPLETED PAYMENT
+router.get(
+  "/pending-applications",
+  requireCmsAdmin,
+  asyncHandler(async (req, res) => {
+    const applications = await User.find({
+      "payments.status": "pending",
+      $or: [
+        { membershipId: { $exists: false } },
+        { membershipId: "" },
+      ],
+    }).sort({ updatedAt: -1 });
+
+    res.status(200).json({
+      message: "Pending membership applications fetched successfully.",
+      applications,
     });
   })
 );

@@ -288,7 +288,7 @@ const ensureMobileVerified = async (mobile) => {
 const findExistingUserForPurchase = async ({ email, mobile }) =>
   User.findOne({
     $or: [{ email }, { mobile }],
-  });
+  }).select("+passwordHash");
 
 const buildRazorpayOrderNotes = ({
   mobile,
@@ -368,6 +368,115 @@ const getNextMembershipSequence = async (state) => {
     return retrySequence?.nextValue || 10001;
   }
 };
+
+router.post(
+  "/membership/save",
+  asyncHandler(async (req, res) => {
+    const tierId = String(req.body.tierId || "").trim().toLowerCase();
+    const memberDetails = normaliseMemberDetails(req.body.memberDetails);
+    const referralCode = String(req.body.referralCode || "").trim().toUpperCase();
+    const personal = memberDetails.personalDetails;
+
+    if (!tierId || !personal.email || !personal.mobile || !personal.fullName) {
+      return res.status(400).json({
+        message: "tierId, name, email, and mobile are required to save details.",
+      });
+    }
+
+    if (!(await ensureEmailVerified(personal.email))) {
+      return res.status(400).json({
+        message: "Please verify the email address before continuing.",
+      });
+    }
+
+    if (!(await ensureMobileVerified(personal.mobile))) {
+      return res.status(400).json({
+        message: "Please verify the mobile number before continuing.",
+      });
+    }
+
+    const tier = await findMembershipTierById(tierId);
+    if (!tier) {
+      return res.status(404).json({ message: "Membership tier not found." });
+    }
+
+    const existingUser = await findExistingUserForPurchase({
+      email: personal.email,
+      mobile: personal.mobile,
+    });
+
+    if (existingUser?.membershipId) {
+      return res.status(409).json({
+        message: "A member account already exists with this email or mobile number.",
+      });
+    }
+
+    const payment = {
+      membershipTierId: tier.id,
+      membershipTierName: tier.name,
+      amount:
+        parseTierPriceToPaise(tier.price) +
+        parseTierPriceToPaise(tier.adminFee),
+      currency: "INR",
+      priceLabel: String(tier.price || ""),
+      period: String(tier.duration || ""),
+      status: "pending",
+      method: "",
+    };
+
+    const update = {
+      name: personal.fullName,
+      email: personal.email,
+      mobile: personal.mobile,
+      dob: personal.dob,
+      gender: personal.gender,
+      maritalStatus: personal.maritalStatus,
+      anniversary: personal.anniversary,
+      occupation: personal.occupation,
+      residenceAddress: personal.residenceAddress,
+      correspondenceAddress: personal.correspondenceAddress,
+      officeAddress: personal.officeAddress,
+      spouse: memberDetails.familyDetails.spouse,
+      familyMembers: memberDetails.familyDetails.children,
+      documents: memberDetails.documents,
+      referralCode,
+      membership: {
+        tierId: tier.id,
+        name: tier.name,
+        status: "Payment Pending",
+        duration: tier.duration || "",
+        purchasePrice: String(tier.price || ""),
+      },
+    };
+
+    const user = existingUser || new User();
+    Object.assign(user, update);
+    if (!Array.isArray(user.payments) || user.payments.length === 0) {
+      user.payments = [payment];
+    } else {
+      const existingPayment = user.payments.find(
+        (item) => item.membershipTierId === tier.id && item.status === "pending",
+      );
+      if (existingPayment) {
+        Object.assign(existingPayment, payment);
+      } else {
+        user.payments.unshift(payment);
+      }
+    }
+
+    if (!user.passwordHash) {
+      user.passwordHash = hashSecret(crypto.randomBytes(24).toString("hex"));
+    }
+
+    await user.save();
+    return res.status(existingUser ? 200 : 201).json({
+      success: true,
+      message: "Membership details saved successfully.",
+      status: "Payment Pending",
+      userId: user._id,
+    });
+  }),
+);
 
 router.post(
   "/membership/order",
