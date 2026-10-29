@@ -209,7 +209,7 @@ const normaliseMemberDetails = (payload = {}) => {
   };
 };
 
-const validateMemberDetails = (memberDetails) => {
+const validateMemberDetails = (memberDetails, { requireDocuments = true } = {}) => {
   const errors = [];
   const personalDetails = memberDetails.personalDetails;
   const residenceAddress = personalDetails.residenceAddress;
@@ -243,14 +243,16 @@ const validateMemberDetails = (memberDetails) => {
       "Please select a valid Indian state or union territory for the office address.",
     );
   }
-  if (!memberDetails.documents.idProof?.proofType && !memberDetails.documents.idProofType)
-    errors.push("Aadhaar card type is required.");
-  if (!memberDetails.documents.idProof?.dataUrl && !memberDetails.documents.idProof?.url)
-    errors.push("Aadhaar card is required.");
-  if (!memberDetails.documents.addressProof?.proofType)
-    errors.push("Additional ID type is required.");
-  if (!memberDetails.documents.addressProof?.dataUrl && !memberDetails.documents.addressProof?.url)
-    errors.push("Additional ID document is required.");
+  if (requireDocuments) {
+    if (!memberDetails.documents.idProof?.proofType && !memberDetails.documents.idProofType)
+      errors.push("Aadhaar card type is required.");
+    if (!memberDetails.documents.idProof?.dataUrl && !memberDetails.documents.idProof?.url)
+      errors.push("Aadhaar card is required.");
+    if (!memberDetails.documents.addressProof?.proofType)
+      errors.push("Additional ID type is required.");
+    if (!memberDetails.documents.addressProof?.dataUrl && !memberDetails.documents.addressProof?.url)
+      errors.push("Additional ID document is required.");
+  }
   if (!memberDetails.acceptedTerms)
     errors.push("You must accept the terms and conditions.");
 
@@ -500,7 +502,9 @@ router.post(
       });
     }
 
-    const validationErrors = validateMemberDetails(memberDetails);
+    const validationErrors = validateMemberDetails(memberDetails, {
+      requireDocuments: false,
+    });
 
     if (validationErrors.length > 0) {
       return res.status(400).json({
@@ -639,7 +643,9 @@ router.post(
       });
     }
 
-    const validationErrors = validateMemberDetails(memberDetails);
+    const validationErrors = validateMemberDetails(memberDetails, {
+      requireDocuments: false,
+    });
 
     if (validationErrors.length > 0) {
       return res.status(400).json({

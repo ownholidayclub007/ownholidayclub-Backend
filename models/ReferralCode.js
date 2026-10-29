@@ -10,6 +10,14 @@ const referralCodeSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
+    customNumber: {
+      type: Number,
+      min: 0,
+      max: 99,
+      unique: true,
+      sparse: true,
+      select: false,
+    },
     membershipCount: {
       type: Number,
       default: 0,
@@ -22,6 +30,12 @@ const referralCodeSchema = new mongoose.Schema(
     createdBy: {
       type: String,
       default: "Admin",
+    },
+    referrerName: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: "",
     },
     lastUsedAt: {
       type: Date,

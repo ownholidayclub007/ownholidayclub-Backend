@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   deleteReferralCode,
+  generateCustomReferralCode,
   generateReferralCodes,
   getReferralCodes,
   validateReferralCode,
@@ -11,6 +12,7 @@ const router = express.Router();
 
 router.get("/", getReferralCodes);
 router.post("/generate", requireCmsAdmin, generateReferralCodes);
+router.post("/generate-custom", requireCmsAdmin, generateCustomReferralCode);
 router.post("/validate", validateReferralCode);
 router.delete("/:id", requireCmsAdmin, deleteReferralCode);
 

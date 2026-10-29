@@ -6,6 +6,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const { generateMembershipInvoicePdf } = require("../utils/invoice");
 const { getTierBaseDurationYears, getTierBonusYears } = require("../utils/membership");
 const { sendHolidayBookingAdminEmail } = require("../utils/email");
+const { uploadMemberDocuments } = require("../utils/cloudinary");
 
 const router = express.Router();
 
@@ -699,19 +700,24 @@ router.put(
       anniversary: String(req.body.anniversary || "").trim(),
       occupation: String(req.body.occupation || "").trim(),
       residenceAddress: normaliseAddress(req.body.residenceAddress),
+      correspondenceAddress: normaliseAddress(req.body.correspondenceAddress),
       officeAddress: normaliseAddress(req.body.officeAddress),
       spouse: {
         name: String(req.body?.spouse?.name || "").trim(),
         dob: String(req.body?.spouse?.dob || "").trim(),
+        email: String(req.body?.spouse?.email || "").trim().toLowerCase(),
+        mobile: String(req.body?.spouse?.mobile || "").replace(/\D/g, ""),
       },
       familyMembers: normaliseFamilyMembers(req.body.familyMembers),
       documents: {
         profileImage: normaliseDocument(req.body?.documents?.profileImage),
         idProof: normaliseDocument(req.body?.documents?.idProof),
         addressProof: normaliseDocument(req.body?.documents?.addressProof),
+        spouseId: normaliseDocument(req.body?.documents?.spouseId),
       },
     };
 
+    updates.documents = await uploadMemberDocuments(updates.documents);
     Object.assign(user, updates);
     await user.save();
 

@@ -101,7 +101,7 @@ const uploadDocumentToCloudinary = async ({
 };
 
 const uploadMemberDocuments = async (documents = {}) => {
-  const [profileImage, idProof, addressProof] = await Promise.all([
+  const [profileImage, idProof, addressProof, spouseId] = await Promise.all([
     uploadDocumentToCloudinary({
       file: documents.profileImage,
       documentType: "profile-image",
@@ -114,12 +114,17 @@ const uploadMemberDocuments = async (documents = {}) => {
       file: documents.addressProof,
       documentType: "address-proof",
     }),
+    uploadDocumentToCloudinary({
+      file: documents.spouseId,
+      documentType: "spouse-id",
+    }),
   ]);
 
   return {
     profileImage,
     idProof,
     addressProof,
+    spouseId,
   };
 };
 

@@ -68,6 +68,70 @@ exports.generateReferralCodes = async (req, res) => {
   }
 };
 
+exports.generateCustomReferralCode = async (req, res) => {
+  try {
+    const referrerName =
+      typeof req.body?.referrerName === "string" ? req.body.referrerName.trim() : "";
+    const code =
+      typeof req.body?.code === "string" ? req.body.code.trim().toUpperCase() : "";
+
+    if (!referrerName || referrerName.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "VP name is required and must be 100 characters or fewer.",
+      });
+    }
+
+    if (!/^[A-Z]+(?:0[1-9]|[1-9]\d)$/.test(code)) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter your chosen name or initials followed by exactly 2 digits (e.g. DS01).",
+      });
+    }
+
+    const customNumber = Number(code.slice(-2));
+    const existingNumberedCode = await ReferralCode.exists({
+      $or: [
+        { customNumber },
+        { code: new RegExp(`^[A-Z]+${String(customNumber).padStart(2, "0")}$`) },
+      ],
+    });
+
+    if (existingNumberedCode) {
+      return res.status(409).json({
+        success: false,
+        message: `The number ${String(customNumber).padStart(2, "0")} is already used. Choose a different number.`,
+      });
+    }
+
+    const data = await ReferralCode.create({
+      code,
+      customNumber,
+      referrerName,
+      createdBy: req.cmsAdmin?.username || "Admin",
+      notes: "Custom referral code generated for a VP.",
+    });
+
+    return res.status(201).json({ success: true, data });
+  } catch (error) {
+    if (error.code === 11000) {
+      if (error.keyPattern?.customNumber) {
+        return res.status(409).json({
+          success: false,
+          message: `The number ${String(error.keyValue?.customNumber).padStart(2, "0")} is already used. Choose a different number.`,
+        });
+      }
+
+      return res.status(409).json({
+        success: false,
+        message: "This referral code already exists. Enter a different code.",
+      });
+    }
+
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 exports.validateReferralCode = async (req, res) => {
   try {
     const code = String(req.body?.code || "").trim().toUpperCase();
