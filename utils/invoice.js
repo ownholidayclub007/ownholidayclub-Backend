@@ -337,10 +337,11 @@ const generateMembershipInvoicePdf = async ({
   const amountInWords = `${numberToIndianWords(totalPaidRupees)} Rupees Only`;
   const termsLines = buildDynamicTerms({ membership, payment });
 
-  const orderText = payment.orderId || "";
-  const orderFontSize = getFontSizeToFit({
+  const paymentIdText =
+    payment.paymentId || payment.notes?.razorpayPaymentId || payment.orderId || "";
+  const paymentIdFontSize = getFontSizeToFit({
     font: fontBold,
-    text: orderText,
+    text: paymentIdText,
     maxWidth: 114,
     defaultSize: 10.75,
     minSize: 7.75,
@@ -384,10 +385,10 @@ const generateMembershipInvoicePdf = async ({
   });
 
   drawWhiteBox(page, 163, 568, 134, 18);
-  drawText(page, orderText, {
+  drawText(page, paymentIdText, {
     x: 176.84,
     y: 573.85,
-    size: orderFontSize,
+    size: paymentIdFontSize,
     font: fontBold,
   });
 

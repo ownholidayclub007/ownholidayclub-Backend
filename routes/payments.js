@@ -4,7 +4,6 @@ const axios = require("axios");
 
 const CmsEntry = require("../models/CmsEntry");
 const EmailVerification = require("../models/EmailVerification");
-const MemberSequence = require("../models/MemberSequence");
 const MobileVerification = require("../models/MobileVerification");
 const ReferralCode = require("../models/ReferralCode");
 const User = require("../models/User");
@@ -14,6 +13,7 @@ const {
   uploadMemberDocuments,
 } = require("../utils/cloudinary");
 const { generateMembershipInvoicePdf } = require("../utils/invoice");
+const { getNextMembershipSequence } = require("../utils/memberSequence");
 const { sendWelcomePasswordEmail, sendLeadNotificationEmail } = require("../utils/email");
 const {
   buildMembershipId,
@@ -323,52 +323,6 @@ const getAxiosErrorMessage = (error, fallbackMessage) => {
   }
 
   return fallbackMessage;
-};
-
-const getNextMembershipSequence = async (state) => {
-  const stateCode = getStateCode(state);
-  const existingSequence = await MemberSequence.findOneAndUpdate(
-    { stateCode },
-    {
-      $inc: {
-        nextValue: 1,
-      },
-    },
-    {
-      new: true,
-    },
-  );
-
-  if (existingSequence) {
-    return existingSequence.nextValue;
-  }
-
-  try {
-    const createdSequence = await MemberSequence.create({
-      stateCode,
-      nextValue: 10001,
-    });
-
-    return createdSequence.nextValue;
-  } catch (error) {
-    if (error?.code !== 11000) {
-      throw error;
-    }
-
-    const retrySequence = await MemberSequence.findOneAndUpdate(
-      { stateCode },
-      {
-        $inc: {
-          nextValue: 1,
-        },
-      },
-      {
-        new: true,
-      },
-    );
-
-    return retrySequence?.nextValue || 10001;
-  }
 };
 
 router.post(

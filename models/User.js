@@ -46,6 +46,21 @@ const documentSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    encryptedData: {
+      type: Buffer,
+      default: undefined,
+      select: false,
+    },
+    encryptionIv: {
+      type: Buffer,
+      default: undefined,
+      select: false,
+    },
+    encryptionAuthTag: {
+      type: Buffer,
+      default: undefined,
+      select: false,
+    },
   },
   { _id: false },
 );
@@ -421,6 +436,10 @@ const userSchema = new mongoose.Schema(
         type: documentSchema,
         default: () => ({}),
       },
+      panCard: {
+        type: documentSchema,
+        default: () => ({}),
+      },
       addressProof: {
         type: documentSchema,
         default: () => ({}),
@@ -531,6 +550,12 @@ const userSchema = new mongoose.Schema(
         delete returnedObject.emailOtpExpiresAt;
         delete returnedObject.resetOtpCode;
         delete returnedObject.resetOtpExpiresAt;
+        Object.values(returnedObject.documents || {}).forEach((document) => {
+          if (!document) return;
+          delete document.encryptedData;
+          delete document.encryptionIv;
+          delete document.encryptionAuthTag;
+        });
         return returnedObject;
       },
     },

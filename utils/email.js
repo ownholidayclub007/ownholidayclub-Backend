@@ -318,6 +318,45 @@ const sendWelcomePasswordEmail = async ({
   });
 };
 
+const sendMembershipInvoiceEmail = async ({
+  to,
+  fullName,
+  membershipId,
+  invoiceAttachment,
+}) => {
+  const safeName = String(fullName || "Member").trim() || "Member";
+  const safeMembershipId = String(membershipId || "").trim();
+  const escapeHtml = (value) =>
+    String(value).replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[character]);
+
+  if (!invoiceAttachment?.content || !invoiceAttachment?.filename) {
+    throw new Error("A generated invoice attachment is required.");
+  }
+
+  const from = getFromAddress();
+  const replyTo = getReplyToAddress();
+
+  return sendMailWithLogging({
+    from,
+    ...(replyTo ? { replyTo } : {}),
+    to,
+    subject: "Your Own Holiday Club membership invoice",
+    text: `Hello ${safeName}, your membership invoice is attached. Membership ID: ${safeMembershipId}.`,
+    html: `<p>Hello ${escapeHtml(safeName)},</p><p>Your Own Holiday Club membership invoice is attached.</p><p>Membership ID: <strong>${escapeHtml(safeMembershipId)}</strong></p>`,
+    attachments: [{
+      filename: invoiceAttachment.filename,
+      content: invoiceAttachment.content,
+      contentType: invoiceAttachment.contentType || "application/pdf",
+    }],
+  });
+};
+
 const sendLeadNotificationEmail = async ({
   leadType,
   leadDetails,
@@ -701,9 +740,9 @@ const sendHolidayBookingAdminEmail = async ({
 module.exports = {
   sendOtpEmail,
   sendWelcomePasswordEmail,
+  sendMembershipInvoiceEmail,
   sendLeadNotificationEmail,
   sendLeadThankYouEmail,
   sendGenericThankYouEmail,
   sendHolidayBookingAdminEmail,
 };
-
