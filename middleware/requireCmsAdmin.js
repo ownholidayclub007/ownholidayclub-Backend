@@ -12,7 +12,7 @@ module.exports = asyncHandler(async (req, res, next) => {
 
   const tokenPayload = verifyCmsToken(token);
 
-  if (!tokenPayload?.id) {
+  if (!tokenPayload?.id || tokenPayload.type === "influencer") {
     return res.status(401).json({ message: "Invalid or expired CMS session." });
   }
 

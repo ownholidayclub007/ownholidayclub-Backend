@@ -37,6 +37,12 @@ const referralCodeSchema = new mongoose.Schema(
       maxlength: 100,
       default: "",
     },
+    influencerAccountId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "InfluencerAccount",
+      default: null,
+      index: true,
+    },
     lastUsedAt: {
       type: Date,
       default: null,

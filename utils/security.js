@@ -71,6 +71,10 @@ const buildOtpDebugPayload = (otp) =>
 const CMS_TOKEN_TTL_HOURS = 12;
 const CMS_TOKEN_SECRET =
   process.env.CMS_TOKEN_SECRET || "ownholidayclub-cms-secret";
+const INFLUENCER_TOKEN_SECRET =
+  process.env.INFLUENCER_TOKEN_SECRET ||
+  process.env.CMS_TOKEN_SECRET ||
+  "ownholidayclub-influencer-secret";
 
 const encodeToken = (payload) =>
   Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -136,6 +140,50 @@ const verifyCmsToken = (token) => {
   return decodedPayload;
 };
 
+const signInfluencerToken = (influencer) => {
+  const payload = encodeToken({
+    type: "influencer",
+    id: String(influencer?._id || ""),
+    username: normaliseUsername(influencer?.username),
+    exp: Date.now() + 12 * 60 * 60 * 1000,
+  });
+  const signature = crypto
+    .createHmac("sha256", INFLUENCER_TOKEN_SECRET)
+    .update(payload)
+    .digest("base64url");
+  return `${payload}.${signature}`;
+};
+
+const verifyInfluencerToken = (token) => {
+  const [payload, signature] = String(token || "").split(".");
+  if (!payload || !signature) return null;
+
+  const expectedSignature = crypto
+    .createHmac("sha256", INFLUENCER_TOKEN_SECRET)
+    .update(payload)
+    .digest("base64url");
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+  if (
+    signatureBuffer.length !== expectedBuffer.length ||
+    !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+  ) {
+    return null;
+  }
+
+  const decodedPayload = decodeToken(payload);
+  if (
+    decodedPayload?.type !== "influencer" ||
+    !decodedPayload.id ||
+    !decodedPayload.exp ||
+    decodedPayload.exp < Date.now()
+  ) {
+    return null;
+  }
+
+  return decodedPayload;
+};
+
 module.exports = {
   buildOtpDebugPayload,
   generateOtp,
@@ -147,6 +195,8 @@ module.exports = {
   normaliseMobile,
   normaliseUsername,
   signCmsToken,
+  signInfluencerToken,
   verifyCmsToken,
+  verifyInfluencerToken,
   verifySecret,
 };
