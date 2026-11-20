@@ -1,4 +1,5 @@
 const axios = require("axios");
+const ReferralCode = require("../models/ReferralCode");
 const User = require("../models/User");
 
 const SHEET_HEADERS = [
@@ -10,7 +11,20 @@ const SHEET_HEADERS = [
   "Payment Status",
   "Saved On",
 ];
+const REFERRAL_CODE_SHEET_HEADERS = [
+  "Referral Code",
+  "VP Name",
+  "Memberships",
+  "Status",
+  "Created On",
+];
 const SYNC_INTERVAL_MS = 15 * 60 * 1000;
+
+const toIsoDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+};
 
 const toSheetValues = (applications) => [
   SHEET_HEADERS,
@@ -24,9 +38,22 @@ const toSheetValues = (applications) => [
       String(application.mobile || ""),
       String(application.membership?.name || ""),
       "Payment Pending",
-      savedOn && !Number.isNaN(new Date(savedOn).getTime())
-        ? new Date(savedOn).toISOString()
-        : "",
+      toIsoDate(savedOn),
+    ];
+  }),
+];
+
+const toReferralCodeSheetValues = (referralCodes) => [
+  REFERRAL_CODE_SHEET_HEADERS,
+  ...referralCodes.map((referralCode) => {
+    const membershipCount = Number(referralCode.membershipCount);
+
+    return [
+      String(referralCode.code || ""),
+      String(referralCode.referrerName || ""),
+      Number.isFinite(membershipCount) ? Math.max(0, membershipCount) : 0,
+      referralCode.isActive === false ? "Inactive" : "Active",
+      toIsoDate(referralCode.createdAt),
     ];
   }),
 ];
@@ -50,8 +77,33 @@ const getConfiguration = () => {
   return { url, secret };
 };
 
-const syncPendingApplicationsToGoogleSheet = async () => {
+const writeRowsToGoogleSheet = async (sheetName, values, errorMessage) => {
   const { url, secret } = getConfiguration();
+
+  try {
+    const response = await axios.post(
+      url,
+      { secret, sheetName, values },
+      { timeout: 20000 },
+    );
+    const result = typeof response.data === "string"
+      ? JSON.parse(response.data)
+      : response.data;
+
+    if (!result?.success) {
+      throw new Error("Google Sheets did not confirm the update.");
+    }
+
+    return { syncedCount: values.length - 1 };
+  } catch (cause) {
+    const error = new Error(errorMessage);
+    error.statusCode = 502;
+    error.cause = cause;
+    throw error;
+  }
+};
+
+const syncPendingApplicationsToGoogleSheet = async () => {
   const applications = await User.find(
     {
       "payments.status": "pending",
@@ -65,48 +117,54 @@ const syncPendingApplicationsToGoogleSheet = async () => {
     .sort({ updatedAt: -1 })
     .lean();
 
-  try {
-    const response = await axios.post(
-      url,
-      { secret, values: toSheetValues(applications) },
-      { timeout: 20000 },
-    );
-    const result = typeof response.data === "string"
-      ? JSON.parse(response.data)
-      : response.data;
-
-    if (!result?.success) {
-      throw new Error("Google Sheets did not confirm the update.");
-    }
-
-    return { syncedCount: applications.length };
-  } catch (cause) {
-    const error = new Error("Could not sync pending applications to Google Sheets.");
-    error.statusCode = 502;
-    error.cause = cause;
-    throw error;
-  }
+  return writeRowsToGoogleSheet(
+    "Pending Applications",
+    toSheetValues(applications),
+    "Could not sync pending applications to Google Sheets.",
+  );
 };
 
-const startPendingApplicationsSheetSync = () => {
+const syncReferralCodesToGoogleSheet = async () => {
+  const referralCodes = await ReferralCode.find(
+    {},
+    "code referrerName membershipCount isActive createdAt",
+  )
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return writeRowsToGoogleSheet(
+    "Referral Codes",
+    toReferralCodeSheetValues(referralCodes),
+    "Could not sync referral codes to Google Sheets.",
+  );
+};
+
+const startGoogleSheetsSync = () => {
   const hasConfiguration = Boolean(
     process.env.PENDING_APPS_SHEET_WEBHOOK_URL ||
     process.env.PENDING_APPS_SHEET_SYNC_SECRET,
   );
   if (!hasConfiguration) return null;
 
-  const syncAndLogErrors = () => {
-    syncPendingApplicationsToGoogleSheet().catch((error) => {
-      console.error("Scheduled pending applications sheet sync failed:", error.message);
+  const syncAndLogErrors = (sync, description) => {
+    sync().catch((error) => {
+      console.error(`Scheduled ${description} Google Sheets sync failed:`, error.message);
     });
   };
 
-  syncAndLogErrors();
-  return setInterval(syncAndLogErrors, SYNC_INTERVAL_MS);
+  const syncAllSheets = () => {
+    syncAndLogErrors(syncPendingApplicationsToGoogleSheet, "pending applications");
+    syncAndLogErrors(syncReferralCodesToGoogleSheet, "referral codes");
+  };
+
+  syncAllSheets();
+  return setInterval(syncAllSheets, SYNC_INTERVAL_MS);
 };
 
 module.exports = {
-  startPendingApplicationsSheetSync,
+  startGoogleSheetsSync,
   syncPendingApplicationsToGoogleSheet,
+  syncReferralCodesToGoogleSheet,
+  toReferralCodeSheetValues,
   toSheetValues,
 };

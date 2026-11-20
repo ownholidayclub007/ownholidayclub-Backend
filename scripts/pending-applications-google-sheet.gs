@@ -3,7 +3,6 @@ function doPost(event) {
     const properties = PropertiesService.getScriptProperties();
     const expectedSecret = properties.getProperty("SYNC_SECRET");
     const spreadsheetId = properties.getProperty("SPREADSHEET_ID");
-    const sheetName = properties.getProperty("SHEET_NAME") || "Pending Applications";
 
     if (!expectedSecret || !spreadsheetId) {
       throw new Error("Missing required script properties.");
@@ -12,6 +11,10 @@ function doPost(event) {
     const payload = JSON.parse(event.postData.contents);
     if (!payload.secret || payload.secret !== expectedSecret) {
       return jsonResponse({ success: false, message: "Unauthorized request." });
+    }
+    const sheetName = payload.sheetName || properties.getProperty("SHEET_NAME") || "Pending Applications";
+    if (!["Pending Applications", "Referral Codes"].includes(sheetName)) {
+      throw new Error("Invalid destination sheet.");
     }
     if (!Array.isArray(payload.values) || payload.values.length === 0) {
       throw new Error("Invalid sheet values.");

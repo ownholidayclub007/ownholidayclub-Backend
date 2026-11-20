@@ -1,6 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { toSheetValues } = require("../utils/pendingApplicationsSheetSync");
+const {
+  toReferralCodeSheetValues,
+  toSheetValues,
+} = require("../utils/pendingApplicationsSheetSync");
 
 test("Google Sheets export includes only the pending-application columns", () => {
   const values = toSheetValues([
@@ -30,4 +33,33 @@ test("Google Sheets export includes only the pending-application columns", () =>
     ],
     ["application-2", "", "", "9123456780", "", "Payment Pending", ""],
   ]);
+});
+
+test("Referral code export excludes influencer credentials", () => {
+  const values = toReferralCodeSheetValues([
+    {
+      code: "DS01",
+      referrerName: "Divya Singh",
+      membershipCount: 3,
+      isActive: true,
+      createdAt: "2026-11-20T08:00:00.000Z",
+      influencerAccountId: {
+        password: "must-not-be-exported",
+        encryptedPassword: "encrypted-private-value",
+      },
+    },
+    {
+      code: "PS02",
+      membershipCount: Number.NaN,
+      isActive: false,
+      createdAt: "invalid date",
+    },
+  ]);
+
+  assert.deepEqual(values, [
+    ["Referral Code", "VP Name", "Memberships", "Status", "Created On"],
+    ["DS01", "Divya Singh", 3, "Active", "2026-11-20T08:00:00.000Z"],
+    ["PS02", "", 0, "Inactive", ""],
+  ]);
+  assert.doesNotMatch(JSON.stringify(values), /password|encrypted-private-value/i);
 });

@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const ReferralCode = require("../models/ReferralCode");
 const InfluencerAccount = require("../models/InfluencerAccount");
 const { decryptPassword } = require("../utils/influencerCredentials");
+const { syncReferralCodesToGoogleSheet } = require("../utils/pendingApplicationsSheetSync");
 
 const generateCodeValue = () =>
   `OHC-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
@@ -64,6 +65,22 @@ exports.getReferralCodes = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.syncReferralCodesToGoogleSheet = async (req, res) => {
+  try {
+    const result = await syncReferralCodesToGoogleSheet();
+    return res.status(200).json({
+      success: true,
+      message: "Referral codes synced to Google Sheets.",
+      syncedCount: result.syncedCount,
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Could not sync referral codes to Google Sheets.",
+    });
   }
 };
 

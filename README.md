@@ -78,7 +78,7 @@ Each influencer is linked to exactly one referral code, and that referral code i
 Influencer passwords are stored as hashes for authentication and as encrypted values solely for authenticated admin display. Admins can view the masked password in the Referral Codes page or reset it to generate another unique password.
 
 ## Pending applications Google Sheets sync
-The pending applications page can replace a Google Sheet with the current pending membership applications, either from the **Sync Google Sheet** button or automatically every 15 minutes. Only application ID, name, email, mobile, plan, payment status, and saved date are sent; passwords and uploaded documents are excluded.
+The admin panel syncs both pending applications and referral codes to separate tabs in the same Google Sheet, either from each page's **Sync Google Sheet** button or automatically every 15 minutes. The `Pending Applications` tab contains application ID, name, email, mobile, plan, payment status, and saved date. The `Referral Codes` tab contains the referral code, VP name, membership count, status, and creation date. Passwords and uploaded documents are excluded.
 
 1. Create a Google Sheet and open **Extensions → Apps Script**.
 2. Copy `scripts/pending-applications-google-sheet.gs` into the Apps Script editor and save it.
@@ -90,6 +90,6 @@ The pending applications page can replace a Google Sheet with the current pendin
 5. Add these values to the backend deployment's secret/environment settings and restart the backend:
    - `PENDING_APPS_SHEET_WEBHOOK_URL`: the deployed Apps Script `/exec` URL.
    - `PENDING_APPS_SHEET_SYNC_SECRET`: the same secret used in the Apps Script properties.
-6. Open **Pending Applications** in the admin panel and choose **Sync Google Sheet** to verify the connection.
+6. Open **Pending Applications** or **Referral Codes** in the admin panel and choose **Sync Google Sheet** to verify the connection. The integration only allows writes to those two tabs.
 
 Keep the sync secret private and never commit it. The Apps Script deployment URL is not sufficient by itself to update the sheet; requests must also contain the matching secret. The sheet should only be shared with staff authorized to view applicant contact details.
