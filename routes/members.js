@@ -18,6 +18,7 @@ const {
   normalizeTier,
 } = require("../utils/membership");
 const { getNextMembershipSequence } = require("../utils/memberSequence");
+const { syncPendingApplicationsToGoogleSheet } = require("../utils/pendingApplicationsSheetSync");
 const {
   hashSecret,
   generateRandomPassword,
@@ -687,6 +688,19 @@ router.get(
       applications,
     });
   })
+);
+
+router.post(
+  "/pending-applications/sync-google-sheet",
+  requireCmsAdmin,
+  asyncHandler(async (req, res) => {
+    const result = await syncPendingApplicationsToGoogleSheet();
+    return res.status(200).json({
+      success: true,
+      message: "Pending applications synced to Google Sheets.",
+      syncedCount: result.syncedCount,
+    });
+  }),
 );
 
 // GET ALL HOLIDAY BOOKINGS

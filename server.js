@@ -44,6 +44,7 @@ const budgetRoutes             = require("./routes/budgetRoutes");
 const testimonialRoutes        = require("./routes/testimonials");
 const referralCodeRoutes       = require("./routes/referralCodes");
 const influencerRoutes         = require("./routes/influencers");
+const { startPendingApplicationsSheetSync } = require("./utils/pendingApplicationsSheetSync");
 
 // ─── Port ──────────────────────────────────────────────────────────────────────
 const port = process.env.PORT || 8081;
@@ -208,6 +209,7 @@ app.use((error, req, res, next) => {
 if (require.main === module) {
   app.listen(port, "0.0.0.0", () => {
     console.log(`✅ server is listening at ${port} 🚀`);
+    startPendingApplicationsSheetSync();
   });
 }
 

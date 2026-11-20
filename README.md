@@ -76,3 +76,20 @@ Each influencer is linked to exactly one referral code, and that referral code i
 - `PUT /api/referral-codes/:id` — admin token; updates a referral code, its VP name, and optionally active status. If linked, the influencer account name and username are synchronized.
 
 Influencer passwords are stored as hashes for authentication and as encrypted values solely for authenticated admin display. Admins can view the masked password in the Referral Codes page or reset it to generate another unique password.
+
+## Pending applications Google Sheets sync
+The pending applications page can replace a Google Sheet with the current pending membership applications, either from the **Sync Google Sheet** button or automatically every 15 minutes. Only application ID, name, email, mobile, plan, payment status, and saved date are sent; passwords and uploaded documents are excluded.
+
+1. Create a Google Sheet and open **Extensions → Apps Script**.
+2. Copy `scripts/pending-applications-google-sheet.gs` into the Apps Script editor and save it.
+3. In Apps Script **Project Settings → Script properties**, add:
+   - `SPREADSHEET_ID`: the value between `/d/` and `/edit` in the spreadsheet URL.
+   - `SHEET_NAME`: `Pending Applications` (or the tab name you prefer).
+   - `SYNC_SECRET`: a randomly generated secret with at least 32 characters.
+4. Deploy the Apps Script as a **Web app**, executing as yourself. Allow the web app to receive requests from the backend, then copy its deployed URL ending in `/exec`.
+5. Add these values to the backend deployment's secret/environment settings and restart the backend:
+   - `PENDING_APPS_SHEET_WEBHOOK_URL`: the deployed Apps Script `/exec` URL.
+   - `PENDING_APPS_SHEET_SYNC_SECRET`: the same secret used in the Apps Script properties.
+6. Open **Pending Applications** in the admin panel and choose **Sync Google Sheet** to verify the connection.
+
+Keep the sync secret private and never commit it. The Apps Script deployment URL is not sufficient by itself to update the sheet; requests must also contain the matching secret. The sheet should only be shared with staff authorized to view applicant contact details.
