@@ -1,6 +1,7 @@
 const axios = require("axios");
 const ReferralCode = require("../models/ReferralCode");
 const User = require("../models/User");
+const { decryptPassword } = require("./influencerCredentials");
 
 const SHEET_HEADERS = [
   "Application ID",
@@ -14,6 +15,7 @@ const SHEET_HEADERS = [
 const REFERRAL_CODE_SHEET_HEADERS = [
   "Referral Code",
   "VP Name",
+  "Password",
   "Memberships",
   "Status",
   "Created On",
@@ -51,6 +53,7 @@ const toReferralCodeSheetValues = (referralCodes) => [
     return [
       String(referralCode.code || ""),
       String(referralCode.referrerName || ""),
+      decryptPassword(referralCode.influencerAccountId?.encryptedPassword) || "",
       Number.isFinite(membershipCount) ? Math.max(0, membershipCount) : 0,
       referralCode.isActive === false ? "Inactive" : "Active",
       toIsoDate(referralCode.createdAt),
@@ -127,8 +130,9 @@ const syncPendingApplicationsToGoogleSheet = async () => {
 const syncReferralCodesToGoogleSheet = async () => {
   const referralCodes = await ReferralCode.find(
     {},
-    "code referrerName membershipCount isActive createdAt",
+    "code referrerName influencerAccountId membershipCount isActive createdAt",
   )
+    .populate({ path: "influencerAccountId", select: "+encryptedPassword" })
     .sort({ createdAt: -1 })
     .lean();
 

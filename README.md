@@ -75,10 +75,10 @@ Each influencer is linked to exactly one referral code, and that referral code i
 - `POST /api/influencers/accounts`, `PUT /api/influencers/accounts/:id`, `PATCH /api/influencers/accounts/:id/password`, and `DELETE /api/influencers/accounts/:id` — admin token. An influencer login is linked to exactly one referral code, and its username is derived from that code.
 - `PUT /api/referral-codes/:id` — admin token; updates a referral code, its VP name, and optionally active status. If linked, the influencer account name and username are synchronized.
 
-Influencer passwords are stored as hashes for authentication and as encrypted values solely for authenticated admin display. They are excluded from Excel and Google Sheets exports. Admins can view the masked password in the Referral Codes page or reset it to generate another unique password.
+Influencer passwords are stored as hashes for authentication and as encrypted values for admin display and Google Sheets sync. Admins can view the masked password in the Referral Codes page or reset it to generate another unique password.
 
 ## Pending applications Google Sheets sync
-The admin panel syncs both pending applications and referral codes to separate tabs in the same Google Sheet, either from each page's **Sync Google Sheet** button or automatically every 15 minutes. The `Pending Applications` tab contains application ID, name, email, mobile, plan, payment status, and saved date. The `Referral Codes` tab contains the referral code, VP name, membership count, status, and creation date. Passwords and uploaded documents are excluded.
+The admin panel syncs both pending applications and referral codes to separate tabs in the same Google Sheet, either from each page's **Sync Google Sheet** button or automatically every 15 minutes. The `Pending Applications` tab contains application ID, name, email, mobile, plan, payment status, and saved date; passwords and uploaded documents are excluded. The `Referral Codes` tab contains the referral code, VP name, linked influencer password, membership count, status, and creation date. The password cell is blank when no recoverable password is available.
 
 1. Create a Google Sheet and open **Extensions → Apps Script**.
 2. Copy `scripts/pending-applications-google-sheet.gs` into the Apps Script editor and save it.
@@ -92,4 +92,4 @@ The admin panel syncs both pending applications and referral codes to separate t
    - `PENDING_APPS_SHEET_SYNC_SECRET`: the same secret used in the Apps Script properties.
 6. Open **Pending Applications** or **Referral Codes** in the admin panel and choose **Sync Google Sheet** to verify the connection. The integration only allows writes to those two tabs.
 
-Keep the sync secret private and never commit it. The Apps Script deployment URL is not sufficient by itself to update the sheet; requests must also contain the matching secret. The sheet should only be shared with staff authorized to view applicant contact details.
+Keep the sync secret private and never commit it. The Apps Script deployment URL is not sufficient by itself to update the sheet; requests must also contain the matching secret. The sheet contains readable influencer passwords and applicant contact details, so restrict access to staff authorized to see both. Google Sheets version history may retain old passwords after a sync or password reset. The backend needs the same `INFLUENCER_CREDENTIALS_ENCRYPTION_KEY` used to encrypt the passwords; a decryption error fails the referral sync rather than replacing the sheet.

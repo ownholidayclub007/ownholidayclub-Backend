@@ -144,6 +144,14 @@ const getMembershipStartDate = (membership = {}, payments = []) =>
   getValidDate(getMatchingPaymentForMembership(membership, payments)?.paidAt) ||
   getValidDate((Array.isArray(payments) ? payments : [])[0]?.paidAt);
 
+const getNextFinancialYearStartDate = (date) => {
+  const indiaDate = new Date(date.getTime() + 330 * 60 * 1000);
+  const financialYearStartYear =
+    indiaDate.getUTCFullYear() + (indiaDate.getUTCMonth() < 3 ? 0 : 1);
+
+  return new Date(Date.UTC(financialYearStartYear, 3, 1) - 330 * 60 * 1000);
+};
+
 const getHolidaySlots = (membership = {}, payments = []) => {
   const holidayQuota = getHolidayQuota(membership);
   const membershipStartDate = getMembershipStartDate(membership, payments);
@@ -153,11 +161,11 @@ const getHolidaySlots = (membership = {}, payments = []) => {
   }
 
   return Array.from({ length: holidayQuota }, (_, index) => {
-    const validFrom = new Date(membershipStartDate);
-    validFrom.setFullYear(validFrom.getFullYear() + index);
+    const validFrom = getNextFinancialYearStartDate(membershipStartDate);
+    validFrom.setUTCFullYear(validFrom.getUTCFullYear() + index);
 
-    const validTo = new Date(membershipStartDate);
-    validTo.setFullYear(validTo.getFullYear() + index + 1);
+    const validTo = new Date(validFrom);
+    validTo.setUTCFullYear(validTo.getUTCFullYear() + 1);
 
     return {
       slotNumber: index + 1,
@@ -479,8 +487,6 @@ router.post(
       });
     }
 
-    // Date constraints removed as per requirement
-    /*
     if (checkIn < requestedSlot.validFrom || checkIn >= requestedSlot.validTo) {
       console.log("Error 400: Check-in must be within the selected holiday access period.", { checkIn, validFrom: requestedSlot.validFrom, validTo: requestedSlot.validTo });
       return res.status(400).json({
@@ -488,14 +494,12 @@ router.post(
       });
     }
 
-    if (checkOut > requestedSlot.validTo) {
+    if (checkOut >= requestedSlot.validTo) {
       console.log("Error 400: Check-out must be within the selected holiday access period.");
       return res.status(400).json({
         message: "Check-out must be within the selected holiday access period.",
       });
     }
-    */
-
     const stayAllowance = getStayAllowance(
       enrichedMembership,
       slotNumber,

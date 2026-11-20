@@ -809,6 +809,40 @@ router.delete(
 );
 
 
+router.delete(
+  "/:userId/holiday-bookings/:bookingId",
+  requireCmsAdmin,
+  asyncHandler(async (req, res) => {
+    const { userId, bookingId } = req.params;
+
+    if (!isValidObjectId(userId) || !isValidObjectId(bookingId)) {
+      return res.status(400).json({ message: "Invalid ID(s) provided." });
+    }
+
+    const result = await User.updateOne(
+      { _id: userId, "holidayBookings._id": bookingId },
+      { $pull: { holidayBookings: { _id: bookingId } } },
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "Member or booking not found." });
+    }
+
+    await logActivity({
+      user: req.cmsAdmin.username,
+      action: "Deleted",
+      module: "Holiday Bookings",
+      details: `Deleted holiday booking ${bookingId} for member ${userId}.`,
+      req,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Holiday booking deleted successfully.",
+    });
+  }),
+);
+
 // UPDATE HOLIDAY BOOKING STATUS
 router.put(
   "/:userId/holiday-bookings/:bookingId/status",
