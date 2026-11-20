@@ -75,7 +75,7 @@ Each influencer is linked to exactly one referral code, and that referral code i
 - `POST /api/influencers/accounts`, `PUT /api/influencers/accounts/:id`, `PATCH /api/influencers/accounts/:id/password`, and `DELETE /api/influencers/accounts/:id` — admin token. An influencer login is linked to exactly one referral code, and its username is derived from that code.
 - `PUT /api/referral-codes/:id` — admin token; updates a referral code, its VP name, and optionally active status. If linked, the influencer account name and username are synchronized.
 
-Influencer passwords are stored as hashes for authentication and as encrypted values solely for authenticated admin display. Admins can view the masked password in the Referral Codes page or reset it to generate another unique password.
+Influencer passwords are stored as hashes for authentication and as encrypted values solely for authenticated admin display. They are excluded from Excel and Google Sheets exports. Admins can view the masked password in the Referral Codes page or reset it to generate another unique password.
 
 ## Pending applications Google Sheets sync
 The admin panel syncs both pending applications and referral codes to separate tabs in the same Google Sheet, either from each page's **Sync Google Sheet** button or automatically every 15 minutes. The `Pending Applications` tab contains application ID, name, email, mobile, plan, payment status, and saved date. The `Referral Codes` tab contains the referral code, VP name, membership count, status, and creation date. Passwords and uploaded documents are excluded.
